@@ -1,0 +1,207 @@
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<style>
+			body{ background: grey;}
+			#canvas{
+				border: 1px solid red;
+
+				-ms-interpolation-mode: nearest-neighbor; 
+  				image-rendering: -webkit-optimize-contrast;
+  				image-rendering: -webkit-crisp-edges;
+  				image-rendering: -moz-crisp-edges;
+  				image-rendering: -o-crisp-edges;
+  				image-rendering: pixelated;
+			}
+		</style>
+	</head>
+	<body>
+		<form action='#' onsubmit="return false;">
+		    <input type='file' id='imgfile' />
+		    <input type='button' id='btnLoad' value='Load' onclick='loadImage();' />
+		</form>
+		<canvas id="canvas"></canvas>
+		<p id="message"></p>
+		<form action='#' onsubmit="return false;">
+		    <textarea id="hexadecimal" name="textarea" rows="10" cols="50" placeholder="Converted String"></textarea><br>
+		    <input type='button' id='btnLoad' value='Draw From String' onclick='drawString();' />
+		</form>
+		<script>
+			var canvasContext = document.getElementById('canvas').getContext('2d');
+
+			var tools = {
+    /**
+     * Converts binary code to hexadecimal string
+     * @param {string} binaryString A string containing binary numbers e.g. '01001101'
+     * @return {string} A string containing the hexadecimal numbers
+     */
+    convertBinaryToHexadecimal: function(binaryString)
+    {
+        var output = '';
+
+        // For every 4 bits in the binary string
+        for (var i=0; i < binaryString.length; i+=4)
+        {
+            // Grab a chunk of 4 bits
+            var bytes = binaryString.substr(i, 4);
+
+            // Convert to decimal then hexadecimal
+            var decimal = parseInt(bytes, 2);
+            var hex = decimal.toString(16);
+
+            // Uppercase all the letters and append to output
+            output += hex.toUpperCase();
+        }
+
+        return output;      
+    },
+
+    /**
+     * Converts hexadecimal code to binary code
+     * @param {string} A string containing single digit hexadecimal numbers
+     * @return {string} A string containing binary numbers
+     */
+    convertHexadecimalToBinary: function(hexString)
+    {
+        var output = '';
+
+        // For each hexadecimal character
+        for (var i=0; i < hexString.length; i++)
+        {
+            // Convert to decimal
+            var decimal = parseInt(hexString.charAt(i), 16);
+
+            // Convert to binary and add 0s onto the left as necessary to make up to 4 bits
+            var binary = this.leftPadding(decimal.toString(2), '0', 4);
+
+            // Append to string         
+            output += binary;
+        }
+
+        return output;
+    },
+
+    /**
+     * Left pad a string with a certain character to a total number of characters
+     * @param {string} inputString The string to be padded
+     * @param {string} padCharacter The character that the string should be padded with
+     * @param {string} totalCharacters The length of string that's required
+     * @returns {string} A string with characters appended to the front of it
+     */
+    leftPadding: function(inputString, padCharacter, totalCharacters)
+    {
+        // If the string is already the right length, just return it
+        if (!inputString || !padCharacter || inputString.length >= totalCharacters)
+        {
+            return inputString;
+        }
+
+        // Work out how many extra characters we need to add to the string
+        var charsToAdd = (totalCharacters - inputString.length)/padCharacter.length;
+
+        // Add padding onto the string
+        for (var i = 0; i < charsToAdd; i++)
+        {
+            inputString = padCharacter + inputString;
+        }
+
+        return inputString;
+    }
+};
+
+			function loadImage() {
+        		var input, file, fr, img;
+		
+        		if (typeof window.FileReader !== 'function') {
+        		    write("The file API isn't supported on this browser yet.");
+        		    return;
+        		}
+		
+        		input = document.getElementById('imgfile');
+        		if (!input) {
+        		    write("Um, couldn't find the imgfile element.");
+        		}
+        		else if (!input.files) {
+        		    write("This browser doesn't seem to support the `files` property of file inputs.");
+        		}
+        		else if (!input.files[0]) {
+        		    write("Please select a file before clicking 'Load'");
+        		}
+        		else {
+        		    file = input.files[0];
+        		    fr = new FileReader();
+        		    fr.onload = createImage;
+        		    fr.readAsDataURL(file);
+        		}
+		
+        		function createImage() {
+        		    img = new Image();
+        		    img.onload = imageLoaded;
+        		    img.src = fr.result;
+        		}
+		
+        		function imageLoaded() {
+        		    var canvas = document.getElementById("canvas")
+        		    canvas.width = img.width;
+        		    canvas.height = img.height;
+        		    canvas.style = "width:" + (img.width * 4) + "; height:" + (img.height * 4);
+        		    var ctx = canvas.getContext("2d");
+        		    ctx.drawImage(img,0,0);
+        		    imageToHex();
+        		    // alert(canvas.toDataURL("image/png"));
+        		}
+
+        		function imageToHex(){
+        			var bigArray = canvasContext.getImageData(0,0,img.width,img.height).data;
+        			var finalString = img.width + "x" + img.height + "|"
+        			var binaryString = ""
+                    var zeroCount = 0
+        			for (var i=3; i < bigArray.length; i+=4){
+        				if (bigArray[i] != 0){
+        					binaryString += '1';
+                            zeroCount = 0;
+        				}else{
+        					binaryString += '0';
+                            zeroCount += 1;
+        				}
+        			}
+                    if (zeroCount > 4) {
+                        extraZeros = Math.floor(zeroCount /4) * 4;
+                        binaryString = binaryString.slice(0,(0-extraZeros));
+                    };
+        			finalString += tools.convertBinaryToHexadecimal(binaryString);
+        			document.getElementById('hexadecimal').innerHTML = finalString;
+        		}
+    		}
+
+    		function write(msg) {
+        	    var p = document.getElementById('message');
+        	    p.innerHTML = msg;
+        	}
+
+        	function drawHex(string,color) {
+        	    var canvas = document.getElementById("canvas");
+        	    var binary = tools.convertHexadecimalToBinary(string.slice( string.indexOf('|') + 1));
+        	    var spriteWidth = string.slice( 0, string.indexOf('x'));
+        	    var spriteHeight = string.slice( string.indexOf('x') + 1 , string.indexOf('|') );
+        	    canvas.width = spriteWidth;
+        	    canvas.height = spriteHeight;
+        	    canvas.style = "width:" + (spriteWidth * 4) + "; height:" + (spriteHeight * 4);
+        	    // canvasContext.fillStyle = 'transparent';
+        	    // canvasContext.fillRect(0,0,spriteWidth,spriteHeight);
+        	    canvasContext.fillStyle = color;
+        	    for (var i=0; i < binary.length; i+=1){
+        	    	if (binary.slice(i,i+1) == 1){
+        	    		var row = Math.floor(i / spriteWidth )
+        	    		canvasContext.fillRect( (i - row * spriteWidth ), row, 1, 1 );
+        	    	}
+        	    }
+        	    // alert(canvas.toDataURL("image/png"));
+        	}
+
+        	function drawString(){
+        		drawHex(document.getElementById('hexadecimal').innerHTML,'blue')
+        	}
+		</script>
+	</body>
+</html>

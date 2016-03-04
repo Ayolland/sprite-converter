@@ -25,7 +25,9 @@
 		<form action='#' onsubmit="return false;">
 		    <textarea id="hexadecimal" name="textarea" rows="10" cols="50" placeholder="Converted String"></textarea><br>
 		    <input type='button' id='btnLoad' value='Draw From String' onclick='drawString();' />
+            <input type='button' id='btnLoad' value='Convert Old String' onclick='oldString();' />
 		</form>
+        <script src="lz-string.min.js"></script>
 		<script>
 			var canvasContext = document.getElementById('canvas').getContext('2d');
 
@@ -153,7 +155,7 @@
 
         		function imageToHex(){
         			var bigArray = canvasContext.getImageData(0,0,img.width,img.height).data;
-        			var finalString = img.width + "x" + img.height + "|"
+        			var dimensions = img.width + "x" + img.height + "|"
         			var binaryString = ""
                     var zeroCount = 0
         			for (var i=3; i < bigArray.length; i+=4){
@@ -169,7 +171,7 @@
                         extraZeros = Math.floor(zeroCount /4) * 4;
                         binaryString = binaryString.slice(0,(0-extraZeros));
                     };
-        			finalString += tools.convertBinaryToHexadecimal(binaryString);
+        			var finalString = LZString.compressToBase64(dimensions + binaryString);
         			document.getElementById('hexadecimal').innerHTML = finalString;
         		}
     		}
@@ -181,14 +183,13 @@
 
         	function drawHex(string,color) {
         	    var canvas = document.getElementById("canvas");
-        	    var binary = tools.convertHexadecimalToBinary(string.slice( string.indexOf('|') + 1));
-        	    var spriteWidth = string.slice( 0, string.indexOf('x'));
-        	    var spriteHeight = string.slice( string.indexOf('x') + 1 , string.indexOf('|') );
+                var fullStr = LZString.decompressFromBase64(string);
+        	    var binary = fullStr.slice(fullStr.indexOf('|') + 1);
+        	    var spriteWidth = fullStr.slice( 0, fullStr.indexOf('x'));
+        	    var spriteHeight = fullStr.slice( fullStr.indexOf('x') + 1 , fullStr.indexOf('|') );
         	    canvas.width = spriteWidth;
         	    canvas.height = spriteHeight;
         	    canvas.style = "width:" + (spriteWidth * 4) + "; height:" + (spriteHeight * 4);
-        	    // canvasContext.fillStyle = 'transparent';
-        	    // canvasContext.fillRect(0,0,spriteWidth,spriteHeight);
         	    canvasContext.fillStyle = color;
         	    for (var i=0; i < binary.length; i+=1){
         	    	if (binary.slice(i,i+1) == 1){
@@ -200,8 +201,16 @@
         	}
 
         	function drawString(){
-        		drawHex(document.getElementById('hexadecimal').innerHTML,'blue')
+        		drawHex(document.getElementById('hexadecimal').value,'blue')
         	}
+
+            function oldString() {
+                var oldStr = document.getElementById('hexadecimal').value;
+                var keep = oldStr.slice(0,oldStr.indexOf('|')+1);
+                var binary = tools.convertHexadecimalToBinary(oldStr.slice( oldStr.indexOf('|') + 1));
+                var finalString = LZString.compressToBase64(keep + binary);
+                document.getElementById('hexadecimal').value = finalString;
+            }
 		</script>
 	</body>
 </html>
